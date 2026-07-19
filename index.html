@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trámite Claro — Asistente regulatorio para MYPEs</title>
+<style>
+  :root{
+    --ink: #1B2A3A;
+    --ink-soft: #2E4258;
+    --paper: #F2EAD8;
+    --paper-dim: #E4D9BF;
+    --stamp: #C1432E;
+    --stamp-dark: #9A3222;
+    --seal: #B8892B;
+    --cream-text: #EDE7D9;
+    --ok: #3F6C51;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--ink);
+    color: var(--cream-text);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .typewriter{
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 0.02em;
+  }
+  .wrap{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom: 2px solid var(--seal);
+    padding-bottom: 14px;
+    margin-bottom: 28px;
+  }
+  header h1{
+    font-size: 22px;
+    margin:0;
+    font-weight:700;
+  }
+  header .stamp-mark{
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    color: var(--seal);
+    border: 1px solid var(--seal);
+    padding: 3px 8px;
+    border-radius: 2px;
+    transform: rotate(-4deg);
+    white-space:nowrap;
+  }
+  .eyebrow{
+    font-family:'Courier New',monospace;
+    font-size: 12px;
+    color: var(--seal);
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+  }
+  .hero p{
+    font-size: 15px;
+    line-height:1.55;
+    color: #C9C2AC;
+    max-width: 46ch;
+    margin: 0 0 26px;
+  }
+
+  .card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+  }
+
+  /* API key */
+  .key-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  input[type="password"], input[type="text"]{
+    flex:1;
+    min-width: 180px;
+    padding: 10px 12px;
+    border: 1px solid var(--paper-dim);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .hint{
+    font-size:12px;
+    color:#5B6B4C;
+    margin-top:8px;
+  }
+  .hint a{ color: var(--stamp); }
+
+  /* dropzone */
+  .dropzone{
+    border: 2px dashed var(--paper-dim);
+    border-radius: 6px;
+    padding: 34px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .dropzone.drag{
+    border-color: var(--stamp);
+    background: #ece1c4;
+  }
+  .dropzone .folder-icon{
+    font-size: 34px;
+    display:block;
+    margin-bottom: 10px;
+  }
+  .dropzone strong{ display:block; font-size:15px; margin-bottom:4px; }
+  .dropzone span{ font-size:13px; color:#5B6B4C; }
+  #fileInput{ display:none; }
+
+  button.primary{
+    background: var(--stamp);
+    color: #fff;
+    border:none;
+    padding: 11px 20px;
+    border-radius: 4px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition: transform .08s ease, background .15s ease;
+  }
+  button.primary:hover{ background: var(--stamp-dark); }
+  button.primary:active{ transform: translateY(1px); }
+  button.primary:disabled{ opacity:.45; cursor:not-allowed; }
+
+  .filename-tag{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#fff;
+    border-radius:4px;
+    padding:10px 14px;
+    font-size:13px;
+    margin-top:14px;
+  }
+  .filename-tag button{
+    background:none;border:none;color:var(--stamp);cursor:pointer;font-size:13px;
+  }
+
+  /* loader */
+  .loader-row{
+    display:flex;align-items:center;gap:12px;
+    font-family:'Courier New',monospace;
+    font-size:13px;
+    color: var(--seal);
+  }
+  .dot{
+    width:8px;height:8px;border-radius:50%;
+    background: var(--stamp);
+    animation: pulse 1.1s infinite ease-in-out;
+  }
+  .dot:nth-child(2){animation-delay:.15s;}
+  .dot:nth-child(3){animation-delay:.3s;}
+  @keyframes pulse{
+    0%,80%,100%{opacity:.25; transform:scale(.85);}
+    40%{opacity:1; transform:scale(1);}
+  }
+
+  /* results */
+  .steps-header{
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .stamp-seal{
+    width:52px;height:52px;flex:none;
+    border:3px solid var(--stamp);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--stamp);
+    font-family:'Courier New',monospace;
+    font-weight:700;
+    font-size:10px;
+    transform: rotate(-10deg) scale(0);
+    animation: stampIn .35s cubic-bezier(.2,1.4,.5,1) forwards;
+    animation-delay:.05s;
+  }
+  @keyframes stampIn{
+    0%{ transform: rotate(-10deg) scale(2.2); opacity:0; }
+    60%{ transform: rotate(-8deg) scale(0.9); opacity:1; }
+    100%{ transform: rotate(-6deg) scale(1); opacity:1; }
+  }
+  .result-col{
+    margin-bottom:16px;
+    padding-bottom:16px;
+    border-bottom: 1px solid var(--paper-dim);
+  }
+  .result-col:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .result-col .num{
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    color: var(--stamp);
+    letter-spacing:.1em;
+  }
+  .result-col h3{
+    margin: 3px 0 8px;
+    font-size:16px;
+  }
+  .result-col ul{ margin:0; padding-left: 18px; }
+  .result-col li{ margin-bottom:6px; font-size:14px; line-height:1.5; }
+
+  .error-box{
+    background: #fff;
+    border-left: 4px solid var(--stamp);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--stamp-dark);
+    border-radius: 4px;
+  }
+
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:#5B6B7A;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 class="typewriter">Trámite Claro</h1>
+    <span class="stamp-mark">EXPEDIENTE MYPE</span>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">01 — EL PROBLEMA</div>
+    <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF y te decimos, en simple, qué hacer.</p>
+  </div>
+
+  <div class="card" id="uploadCard">
+    <div class="eyebrow">02 — SUBE TU DOCUMENTO</div>
+    <div class="dropzone" id="dropzone">
+      <span class="folder-icon">📄</span>
+      <strong>Arrastra tu PDF aquí</strong>
+      <span>o toca para elegir un archivo — notificación SUNAT, ordenanza municipal, etc.</span>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf">
+    <div id="fileTag"></div>
+    <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+      <button class="primary" id="analyzeBtn" disabled>Analizar documento</button>
+    </div>
+  </div>
+
+  <div class="card" id="loaderCard" style="display:none;">
+    <div class="loader-row">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span id="loaderText">Leyendo el documento...</span>
+    </div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div class="error-box" id="errorText"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <div class="steps-header">
+      <div class="stamp-seal">LISTO</div>
+      <div>
+        <div class="eyebrow">03 — TU PLAN DE ACCIÓN</div>
+        <div style="font-size:13px;color:#5B6B4C;">Traducido a lenguaje simple</div>
+      </div>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ SIGNIFICA</div>
+      <h3 id="meaningTitle">—</h3>
+      <p id="meaningText" style="font-size:14px; line-height:1.55; margin:0;"></p>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ DEBES HACER HOY</div>
+      <ul id="todoList"></ul>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ DOCUMENTOS NECESITAS</div>
+      <ul id="docsList"></ul>
+    </div>
+  </div>
+
+  <footer>Prototipo para Hackathon Núcleo Innova 2026 · Los documentos no se almacenan.</footer>
+</div>
+
+<script type="module">
+let pdfjsLib;
+try {
+  pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs");
+} catch (err) {
+  document.getElementById("errorCard").style.display = "block";
+  document.getElementById("errorText").textContent =
+    "No se pudo cargar la librería pdf.js desde el CDN (cdn.jsdelivr.net). Revisa tu conexión a internet o si algo la está bloqueando (firewall, extensión del navegador, red corporativa), y recarga la página.";
+  throw err;
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
+
+let extractedText = "";
+let fileName = "";
+
+const $ = (id) => document.getElementById(id);
+
+const dropzone = $("dropzone");
+const fileInput = $("fileInput");
+
+dropzone.addEventListener("click", () => fileInput.click());
+["dragover","dragenter"].forEach(evt=>{
+  dropzone.addEventListener(evt, (e)=>{ e.preventDefault(); dropzone.classList.add("drag"); });
+});
+["dragleave","drop"].forEach(evt=>{
+  dropzone.addEventListener(evt, (e)=>{ e.preventDefault(); dropzone.classList.remove("drag"); });
+});
+dropzone.addEventListener("drop", (e)=>{
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+});
+fileInput.addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(file) handleFile(file);
+});
+
+async function handleFile(file){
+  if(file.type !== "application/pdf"){
+    showError("Por favor sube un archivo PDF.");
+    return;
+  }
+  fileName = file.name;
+  $("fileTag").innerHTML = `<div class="filename-tag"><span>📎 ${escapeHtml(fileName)}</span><button type="button" onclick="clearFile()">Quitar</button></div>`;
+
+  try{
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
+    let text = "";
+    for(let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(" ") + "\n";
+    }
+    extractedText = text.trim();
+    if(!extractedText){
+      showError("No pudimos leer texto de este PDF (puede ser un escaneo/imagen). Prueba con otro archivo.");
+      $("analyzeBtn").disabled = true;
+    } else {
+      hideError();
+      checkReady();
+    }
+  }catch(err){
+    console.error("Error de pdf.js:", err);
+    showError("No se pudo procesar el PDF. Intenta con otro archivo. (Revisa la consola con Cmd+Opt+C para más detalle)");
+  }
+}
+
+function clearFile(){
+  extractedText = "";
+  fileName = "";
+  $("fileTag").innerHTML = "";
+  checkReady();
+}
+window.clearFile = clearFile;
+
+function checkReady(){
+  $("analyzeBtn").disabled = !extractedText;
+}
+
+function showError(msg){
+  $("errorCard").style.display = "block";
+  $("errorText").textContent = msg;
+}
+function hideError(){
+  $("errorCard").style.display = "none";
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+$("analyzeBtn").addEventListener("click", analyze);
+
+async function analyze(){
+  hideError();
+  $("resultCard").style.display = "none";
+  $("loaderCard").style.display = "block";
+  $("analyzeBtn").disabled = true;
+
+  const messages = [
+    "Leyendo el documento...",
+    "Detectando fechas límite y sanciones...",
+    "Redactando tu checklist en simple..."
+  ];
+  let mi = 0;
+  const loaderInterval = setInterval(()=>{
+    mi = (mi+1) % messages.length;
+    $("loaderText").textContent = messages[mi];
+  }, 1400);
+
+  // El prompt y la API key viven en el backend (endpoint /api/analyze).
+  // El front solo manda el texto extraído del PDF y espera de vuelta el JSON
+  // con la forma: { titulo_significado, que_significa, que_hacer_hoy[], documentos_necesarios[] }
+  try{
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ text: extractedText.slice(0, 12000) })
+    });
+
+    const parsed = await response.json();
+
+    if(!response.ok){
+      throw new Error(parsed?.error || "Error al conectar con el servidor.");
+    }
+
+    renderResult(parsed);
+
+  }catch(err){
+    showError(err.message || "Ocurrió un error al analizar el documento.");
+  }finally{
+    clearInterval(loaderInterval);
+    $("loaderCard").style.display = "none";
+    $("analyzeBtn").disabled = false;
+  }
+}
+
+function renderResult(parsed){
+  $("meaningTitle").textContent = parsed.titulo_significado || "Resumen del documento";
+  $("meaningText").textContent = parsed.que_significa || "";
+
+  const todoList = $("todoList");
+  todoList.innerHTML = "";
+  (parsed.que_hacer_hoy || []).forEach(step=>{
+    const li = document.createElement("li");
+    li.textContent = step;
+    todoList.appendChild(li);
+  });
+
+  const docsList = $("docsList");
+  docsList.innerHTML = "";
+  (parsed.documentos_necesarios || []).forEach(doc=>{
+    const li = document.createElement("li");
+    li.textContent = doc;
+    docsList.appendChild(li);
+  });
+
+  // reset stamp animation
+  const seal = document.querySelector(".stamp-seal");
+  seal.style.animation = "none";
+  void seal.offsetWidth;
+  seal.style.animation = null;
+
+  $("resultCard").style.display = "block";
+  $("resultCard").scrollIntoView({behavior:"smooth", block:"start"});
+}
+</script>
+</body>
+</html>
