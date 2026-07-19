@@ -6,79 +6,85 @@
 <title>Trámite Claro — Asistente regulatorio para MYPEs</title>
 <style>
   :root{
-    --ink: #1B2A3A;
-    --ink-soft: #2E4258;
-    --paper: #F2EAD8;
-    --paper-dim: #E4D9BF;
-    --stamp: #C1432E;
-    --stamp-dark: #9A3222;
-    --seal: #B8892B;
-    --cream-text: #EDE7D9;
-    --ok: #3F6C51;
+    --ink: #202124;
+    --ink-soft: #5f6368;
+    --paper: #ffffff;
+    --paper-dim: #e0e0e0;
+    --stamp: #1a73e8;
+    --stamp-dark: #1557b0;
+    --seal: #1a73e8;
+    --cream-text: #333333;
+    --ok: #1a73e8;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    background: var(--ink);
+    background: #f4f7f6;
     color: var(--cream-text);
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: Arial, sans-serif;
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    padding: 20px;
   }
   .typewriter{
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 0.02em;
+    font-family: Arial, sans-serif;
+    letter-spacing: normal;
   }
   .wrap{
-    max-width: 640px;
+    max-width: 600px;
+    width: 100%;
     margin: 0 auto;
-    padding: 28px 20px 60px;
+    padding: 0;
   }
   header{
     display:flex;
     align-items:baseline;
     justify-content:space-between;
-    border-bottom: 2px solid var(--seal);
+    border-bottom: 2px solid #eee;
     padding-bottom: 14px;
     margin-bottom: 28px;
   }
   header h1{
-    font-size: 22px;
+    font-size: 24px;
     margin:0;
     font-weight:700;
+    color: #1a73e8;
   }
   header .stamp-mark{
-    font-family:'Courier New',monospace;
+    font-family: Arial, sans-serif;
     font-size:11px;
     color: var(--seal);
     border: 1px solid var(--seal);
     padding: 3px 8px;
     border-radius: 2px;
-    transform: rotate(-4deg);
+    transform: none;
     white-space:nowrap;
   }
   .eyebrow{
-    font-family:'Courier New',monospace;
+    font-family: Arial, sans-serif;
     font-size: 12px;
     color: var(--seal);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
+    font-weight: bold;
     margin-bottom: 6px;
   }
   .hero p{
     font-size: 15px;
-    line-height:1.55;
-    color: #C9C2AC;
-    max-width: 46ch;
+    line-height:1.6;
+    color: #5f6368;
+    max-width: none;
     margin: 0 0 26px;
   }
 
   .card{
-    background: var(--paper);
+    background: #fff;
     color: var(--ink);
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 22px;
     margin-bottom: 18px;
-    box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
   /* API key */
@@ -106,38 +112,41 @@
 
   /* dropzone */
   .dropzone{
-    border: 2px dashed var(--paper-dim);
-    border-radius: 6px;
+    border: 2px dashed #1a73e8;
+    border-radius: 8px;
     padding: 34px 20px;
     text-align:center;
     cursor:pointer;
-    transition: border-color .2s ease, background .2s ease;
+    background-color: #f8faff;
+    transition: background .2s ease;
   }
+  .dropzone:hover{ background-color: #e8f0fe; }
   .dropzone.drag{
-    border-color: var(--stamp);
-    background: #ece1c4;
+    border-color: var(--stamp-dark);
+    background: #e8f0fe;
   }
   .dropzone .folder-icon{
     font-size: 34px;
     display:block;
     margin-bottom: 10px;
   }
-  .dropzone strong{ display:block; font-size:15px; margin-bottom:4px; }
-  .dropzone span{ font-size:13px; color:#5B6B4C; }
+  .dropzone strong{ display:block; font-size:15px; margin-bottom:4px; color:#1a73e8; }
+  .dropzone span{ font-size:13px; color:#80868b; }
   #fileInput{ display:none; }
 
   button.primary{
-    background: var(--stamp);
+    background: #1a73e8;
     color: #fff;
     border:none;
-    padding: 11px 20px;
-    border-radius: 4px;
-    font-size:14px;
-    font-weight:600;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size:16px;
+    font-weight:bold;
     cursor:pointer;
-    transition: transform .08s ease, background .15s ease;
+    width:100%;
+    transition: background .3s ease;
   }
-  button.primary:hover{ background: var(--stamp-dark); }
+  button.primary:hover{ background: #1557b0; }
   button.primary:active{ transform: translateY(1px); }
   button.primary:disabled{ opacity:.45; cursor:not-allowed; }
 
@@ -145,8 +154,9 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    background:#fff;
-    border-radius:4px;
+    background:#f8faff;
+    border:1px solid #dbe6fb;
+    border-radius:6px;
     padding:10px 14px;
     font-size:13px;
     margin-top:14px;
@@ -158,9 +168,10 @@
   /* loader */
   .loader-row{
     display:flex;align-items:center;gap:12px;
-    font-family:'Courier New',monospace;
-    font-size:13px;
-    color: var(--seal);
+    font-family: Arial, sans-serif;
+    font-size:14px;
+    color: #d93025;
+    font-weight: bold;
   }
   .dot{
     width:8px;height:8px;border-radius:50%;
@@ -179,48 +190,51 @@
     display:flex; align-items:center; gap:10px; margin-bottom:14px;
   }
   .stamp-seal{
-    width:52px;height:52px;flex:none;
-    border:3px solid var(--stamp);
+    width:44px;height:44px;flex:none;
+    border:none;
     border-radius:50%;
+    background: #e8f0fe;
     display:flex;align-items:center;justify-content:center;
-    color:var(--stamp);
-    font-family:'Courier New',monospace;
+    color:#1a73e8;
+    font-family: Arial, sans-serif;
     font-weight:700;
-    font-size:10px;
-    transform: rotate(-10deg) scale(0);
+    font-size:9px;
+    transform: scale(0);
     animation: stampIn .35s cubic-bezier(.2,1.4,.5,1) forwards;
     animation-delay:.05s;
   }
   @keyframes stampIn{
-    0%{ transform: rotate(-10deg) scale(2.2); opacity:0; }
-    60%{ transform: rotate(-8deg) scale(0.9); opacity:1; }
-    100%{ transform: rotate(-6deg) scale(1); opacity:1; }
+    0%{ transform: scale(0); opacity:0; }
+    60%{ transform: scale(1.1); opacity:1; }
+    100%{ transform: scale(1); opacity:1; }
   }
   .result-col{
     margin-bottom:16px;
     padding-bottom:16px;
-    border-bottom: 1px solid var(--paper-dim);
+    border-bottom: 1px solid #eee;
   }
   .result-col:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
   .result-col .num{
-    font-family:'Courier New',monospace;
+    font-family: Arial, sans-serif;
     font-size:11px;
-    color: var(--stamp);
-    letter-spacing:.1em;
+    color: #1a73e8;
+    font-weight:bold;
+    letter-spacing:.06em;
   }
   .result-col h3{
     margin: 3px 0 8px;
     font-size:16px;
+    color:#202124;
   }
   .result-col ul{ margin:0; padding-left: 18px; }
-  .result-col li{ margin-bottom:6px; font-size:14px; line-height:1.5; }
+  .result-col li{ margin-bottom:6px; font-size:14px; line-height:1.5; color:#5f6368; }
 
   .error-box{
-    background: #fff;
-    border-left: 4px solid var(--stamp);
+    background: #fdeceb;
+    border-left: 4px solid #d93025;
     padding: 12px 14px;
     font-size: 13px;
-    color: var(--stamp-dark);
+    color: #b0281c;
     border-radius: 4px;
   }
 
@@ -242,17 +256,17 @@
 
   <div class="hero">
     <div class="eyebrow">01 — EL PROBLEMA</div>
-    <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF y te decimos, en simple, qué hacer.</p>
+    <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF o una foto y te decimos, en simple, qué hacer.</p>
   </div>
 
   <div class="card" id="uploadCard">
     <div class="eyebrow">02 — SUBE TU DOCUMENTO</div>
     <div class="dropzone" id="dropzone">
-      <span class="folder-icon">📄</span>
-      <strong>Arrastra tu PDF aquí</strong>
-      <span>o toca para elegir un archivo — notificación SUNAT, ordenanza municipal, etc.</span>
+      <span class="folder-icon" id="folderIcon">📄</span>
+      <strong>Arrastra tu PDF o una foto aquí</strong>
+      <span>o toca para elegir un archivo — PDF, o foto (JPG, PNG) de la notificación</span>
     </div>
-    <input type="file" id="fileInput" accept="application/pdf">
+    <input type="file" id="fileInput" accept="application/pdf,image/*">
     <div id="fileTag"></div>
     <div style="margin-top:16px; display:flex; justify-content:flex-end;">
       <button class="primary" id="analyzeBtn" disabled>Analizar documento</button>
@@ -294,11 +308,14 @@
       <div class="num">QUÉ DOCUMENTOS NECESITAS</div>
       <ul id="docsList"></ul>
     </div>
+
+    <button class="primary" id="downloadBtn" type="button" style="margin-top:6px;">📄 Descargar resumen en PDF</button>
   </div>
 
   <footer>Prototipo para Hackathon Núcleo Innova 2026 · Los documentos no se almacenan.</footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 let pdfjsLib;
 try {
@@ -313,7 +330,10 @@ try {
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
 
 let extractedText = "";
+let extractedImageBase64 = null;
+let extractedImageMime = null;
 let fileName = "";
+let lastResult = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -336,47 +356,107 @@ fileInput.addEventListener("change", (e)=>{
   if(file) handleFile(file);
 });
 
+// Comprime y redimensiona la foto en el navegador antes de enviarla.
+// Las fotos de celular modernas pesan varios MB; Vercel rechaza cualquier
+// request de más de 4.5MB (413), así que achicamos la imagen acá para
+// que el base64 resultante quede muy por debajo de ese límite.
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        if(width > height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      resolve(dataUrl.split(",")[1]);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo leer esta imagen. Prueba con otro archivo (JPG o PNG)."));
+    };
+    img.src = url;
+  });
+}
+
 async function handleFile(file){
-  if(file.type !== "application/pdf"){
-    showError("Por favor sube un archivo PDF.");
+  const esPdf = file.type === "application/pdf";
+  const esImagen = file.type.startsWith("image/");
+
+  if(!esPdf && !esImagen){
+    showError("Por favor sube un PDF o una foto (JPG, PNG) del documento.");
     return;
   }
-  fileName = file.name;
-  $("fileTag").innerHTML = `<div class="filename-tag"><span>📎 ${escapeHtml(fileName)}</span><button type="button" onclick="clearFile()">Quitar</button></div>`;
 
+  fileName = file.name;
+  $("folderIcon").textContent = esPdf ? "📄" : "🖼️";
+  $("fileTag").innerHTML = `<div class="filename-tag"><span>${esPdf ? "📎" : "🖼️"} ${escapeHtml(fileName)}</span><button type="button" onclick="clearFile()">Quitar</button></div>`;
+
+  if(esPdf){
+    extractedImageBase64 = null;
+    extractedImageMime = null;
+    try{
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
+      let text = "";
+      for(let i=1; i<=pdf.numPages; i++){
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(it => it.str).join(" ") + "\n";
+      }
+      extractedText = text.trim();
+      if(!extractedText){
+        showError("No pudimos leer texto de este PDF (puede ser un escaneo/imagen). Prueba con otro archivo o sube una foto del documento.");
+        checkReady();
+      } else {
+        hideError();
+        checkReady();
+      }
+    }catch(err){
+      console.error("Error de pdf.js:", err);
+      showError("No se pudo procesar el PDF. Intenta con otro archivo. (Revisa la consola con Cmd+Opt+C para más detalle)");
+    }
+    return;
+  }
+
+  // Es una imagen (foto de la notificación)
+  extractedText = "";
   try{
-    const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
-    let text = "";
-    for(let i=1; i<=pdf.numPages; i++){
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map(it => it.str).join(" ") + "\n";
+    // Primer intento: buena calidad. Si el resultado sigue siendo pesado
+    // (fotos muy grandes de cámaras de gama alta), reintenta más comprimido.
+    let base64 = await compressImage(file, 1600, 0.82);
+    if(base64.length > 3_500_000){
+      base64 = await compressImage(file, 1200, 0.6);
     }
-    extractedText = text.trim();
-    if(!extractedText){
-      showError("No pudimos leer texto de este PDF (puede ser un escaneo/imagen). Prueba con otro archivo.");
-      $("analyzeBtn").disabled = true;
-    } else {
-      hideError();
-      checkReady();
-    }
+    extractedImageBase64 = base64;
+    extractedImageMime = "image/jpeg";
+    hideError();
+    checkReady();
   }catch(err){
-    console.error("Error de pdf.js:", err);
-    showError("No se pudo procesar el PDF. Intenta con otro archivo. (Revisa la consola con Cmd+Opt+C para más detalle)");
+    showError(err.message || "No se pudo procesar la imagen. Prueba con otro archivo.");
   }
 }
 
 function clearFile(){
   extractedText = "";
+  extractedImageBase64 = null;
+  extractedImageMime = null;
   fileName = "";
   $("fileTag").innerHTML = "";
+  $("folderIcon").textContent = "📄";
   checkReady();
 }
 window.clearFile = clearFile;
 
 function checkReady(){
-  $("analyzeBtn").disabled = !extractedText;
+  $("analyzeBtn").disabled = !extractedText && !extractedImageBase64;
 }
 
 function showError(msg){
@@ -410,13 +490,18 @@ async function analyze(){
   }, 1400);
 
   // El prompt y la API key viven en el backend (endpoint /api/analyze).
-  // El front solo manda el texto extraído del PDF y espera de vuelta el JSON
-  // con la forma: { titulo_significado, que_significa, que_hacer_hoy[], documentos_necesarios[] }
+  // El front manda texto (PDF) o una imagen en base64 (foto) y espera de
+  // vuelta el JSON con la forma:
+  // { titulo_significado, que_significa, que_hacer_hoy[], documentos_necesarios[] }
   try{
+    const payload = extractedImageBase64
+      ? { image: extractedImageBase64, mimeType: extractedImageMime }
+      : { text: extractedText.slice(0, 12000) };
+
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ text: extractedText.slice(0, 12000) })
+      body: JSON.stringify(payload)
     });
 
     const parsed = await response.json();
@@ -437,6 +522,8 @@ async function analyze(){
 }
 
 function renderResult(parsed){
+  lastResult = parsed;
+
   $("meaningTitle").textContent = parsed.titulo_significado || "Resumen del documento";
   $("meaningText").textContent = parsed.que_significa || "";
 
@@ -464,6 +551,94 @@ function renderResult(parsed){
 
   $("resultCard").style.display = "block";
   $("resultCard").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("downloadBtn").addEventListener("click", descargarResumenPDF);
+
+function descargarResumenPDF(){
+  if(!lastResult || !window.jspdf){
+    showError("No se pudo generar el PDF. Recarga la página e intenta de nuevo.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const marginX = 48;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const maxWidth = pageWidth - marginX * 2;
+  let y = 64;
+
+  function saltarPaginaSiNecesario(alturaNecesaria){
+    if(y + alturaNecesaria > pageHeight - 60){
+      doc.addPage();
+      y = 64;
+    }
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(26, 115, 232);
+  doc.text("Trámite Claro", marginX, y);
+  y += 18;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(95, 99, 104);
+  doc.text("Resumen de tu plan de acción", marginX, y);
+  y += 22;
+
+  doc.setDrawColor(224, 224, 224);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 28;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(32, 33, 36);
+  const titleLines = doc.splitTextToSize(lastResult.titulo_significado || "Resumen del documento", maxWidth);
+  saltarPaginaSiNecesario(titleLines.length * 16);
+  doc.text(titleLines, marginX, y);
+  y += titleLines.length * 16 + 10;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(95, 99, 104);
+  const meaningLines = doc.splitTextToSize(lastResult.que_significa || "", maxWidth);
+  saltarPaginaSiNecesario(meaningLines.length * 14);
+  doc.text(meaningLines, marginX, y);
+  y += meaningLines.length * 14 + 26;
+
+  function seccion(titulo, items){
+    if(!items || !items.length) return;
+    saltarPaginaSiNecesario(20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(26, 115, 232);
+    doc.text(titulo, marginX, y);
+    y += 18;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(51, 51, 51);
+    items.forEach((item, i) => {
+      const lines = doc.splitTextToSize(`${i + 1}. ${item}`, maxWidth - 10);
+      saltarPaginaSiNecesario(lines.length * 14);
+      doc.text(lines, marginX + 8, y);
+      y += lines.length * 14 + 6;
+    });
+    y += 14;
+  }
+
+  seccion("QUÉ DEBES HACER HOY", lastResult.que_hacer_hoy);
+  seccion("QUÉ DOCUMENTOS NECESITAS", lastResult.documentos_necesarios);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text("Generado por Trámite Claro · Este resumen no reemplaza asesoría legal.", marginX, pageHeight - 30);
+
+  const fecha = new Date().toISOString().slice(0, 10);
+  doc.save(`resumen-tramite-claro-${fecha}.pdf`);
 }
 </script>
 </body>

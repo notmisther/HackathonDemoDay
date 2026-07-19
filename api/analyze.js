@@ -2,22 +2,51 @@
 // Función serverless de Vercel. Se despliega automáticamente si este archivo
 // vive en la carpeta /api de tu proyecto (junto a index.html en la raíz).
 //
-// Configura la variable de entorno GEMINI_API_KEY en Vercel:
-// Project Settings → Environment Variables → GEMINI_API_KEY = tu-key-de-aistudio
+// Configura las variables de entorno en Vercel (Project Settings → Environment Variables):
+//   GEMINI_API_KEY = tu-key-de-aistudio
+//   GEMINI_MODEL   = gemini-2.5-flash   (opcional, por defecto usa este)
 //
 // El front (index.html) le hace POST a /api/analyze con { text: "..." }
-// y espera de vuelta el JSON con la forma:
+// (documentos PDF) o con { image: "base64...", mimeType: "image/jpeg" }
+// (fotos), y espera de vuelta el JSON con la forma:
 // { titulo_significado, que_significa, que_hacer_hoy[], documentos_necesarios[] }
+
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// Nota: se fija una versión estable en vez de usar el alias "gemini-flash-latest".
+// Ese alias apunta siempre a la última versión de un modelo (estable, preview o
+// incluso experimental) y puede cambiar sin previo aviso — un riesgo real si
+// justo cambia el sábado antes de tu pitch. Con un modelo fijo, lo que probaste
+// es exactamente lo que corre en la demo.
+
+const MAX_INPUT_CHARS = 12000; // debe coincidir con el slice() del frontend
+const FETCH_TIMEOUT_MS = 12000; // corta la llamada a Gemini si tarda demasiado en el demo
+const MIME_TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
+// Vercel rechaza cualquier request de más de 4.5MB (413 FUNCTION_PAYLOAD_TOO_LARGE).
+// El frontend ya comprime la foto antes de mandarla, pero esta es la defensa
+// en el servidor por si alguien llama al endpoint directamente.
+const MAX_IMAGE_BASE64_CHARS = 5_000_000;
 
 const SYSTEM_PROMPT = `Eres un asesor legal experto en normativas peruanas diseñado para ayudar a microempresarios. Recibirás un texto burocrático. Debes extraer únicamente las acciones obligatorias, fechas límite y sanciones, y presentarlo como una checklist de máximo 4 pasos usando lenguaje de nivel de educación secundaria.
 
-Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, con esta forma exacta:
-{
-  "titulo_significado": "Frase corta de máximo 8 palabras que resuma qué es este documento",
-  "que_significa": "2-3 frases en lenguaje simple explicando de qué trata el documento y por qué le llega al empresario",
-  "que_hacer_hoy": ["paso 1", "paso 2", "paso 3 (máximo 4 pasos, cada uno una acción concreta con fecha límite si existe)"],
-  "documentos_necesarios": ["documento 1", "documento 2"]
-}`;
+Genera:
+- titulo_significado: frase corta de máximo 8 palabras que resuma qué es este documento.
+- que_significa: 2-3 frases en lenguaje simple explicando de qué trata el documento y por qué le llega al empresario.
+- que_hacer_hoy: lista de máximo 4 pasos, cada uno una acción concreta con fecha límite si existe.
+- documentos_necesarios: lista de documentos que el empresario debe tener a mano.`;
+
+// Schema que fuerza a Gemini a responder SIEMPRE con esta forma exacta,
+// sin necesidad de parsear/limpiar markdown a mano.
+const RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    titulo_significado: { type: "string" },
+    que_significa: { type: "string" },
+    que_hacer_hoy: { type: "array", items: { type: "string" } },
+    documentos_necesarios: { type: "array", items: { type: "string" } },
+  },
+  required: ["titulo_significado", "que_significa", "que_hacer_hoy", "documentos_necesarios"],
+  propertyOrdering: ["titulo_significado", "que_significa", "que_hacer_hoy", "documentos_necesarios"],
+};
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -31,26 +60,69 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { text } = req.body || {};
-  if (!text || typeof text !== "string" || !text.trim()) {
-    res.status(400).json({ error: "Falta el texto del documento a analizar." });
+  const { text, image, mimeType } = req.body || {};
+
+  const tieneTexto = typeof text === "string" && text.trim().length > 0;
+  const tieneImagen = typeof image === "string" && image.trim().length > 0;
+
+  if (!tieneTexto && !tieneImagen) {
+    res.status(400).json({ error: "Falta el documento a analizar (texto o imagen)." });
     return;
   }
 
+  let safeText = "";
+  if (tieneTexto) {
+    // Defensa en profundidad: el frontend ya recorta a 12000 caracteres, pero
+    // alguien podría llamar a este endpoint directamente sin pasar por la UI.
+    safeText = text.slice(0, MAX_INPUT_CHARS);
+  }
+
+  if (tieneImagen) {
+    if (!MIME_TIPOS_PERMITIDOS.includes(mimeType)) {
+      res.status(400).json({ error: "Formato de imagen no soportado. Usa JPG, PNG o WEBP." });
+      return;
+    }
+    if (image.length > MAX_IMAGE_BASE64_CHARS) {
+      res.status(413).json({ error: "La imagen es demasiado pesada. Intenta con una foto más liviana o recórtala." });
+      return;
+    }
+  }
+
+  const parts = tieneImagen
+    ? [
+        { inlineData: { mimeType, data: image } },
+        { text: `${SYSTEM_PROMPT}\n\nAnaliza el documento que aparece en la imagen adjunta (foto de una notificación o normativa).` },
+      ]
+    : [{ text: `${SYSTEM_PROMPT}\n\nTEXTO DEL DOCUMENTO:\n${safeText}` }];
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [
             {
               role: "user",
-              parts: [{ text: `${SYSTEM_PROMPT}\n\nTEXTO DEL DOCUMENTO:\n${text}` }],
+              parts,
             },
           ],
-          generationConfig: { temperature: 0.3 },
+          generationConfig: {
+            temperature: 0.3,
+            // Gemini 2.5 Flash "piensa" internamente antes de responder, y esos
+            // tokens de razonamiento se descuentan del mismo maxOutputTokens.
+            // Como esta tarea es extracción simple (no necesita razonamiento),
+            // lo apagamos para que todo el presupuesto se use en la respuesta.
+            thinkingConfig: { thinkingBudget: 0 },
+            maxOutputTokens: 2048, // margen amplio como red de seguridad
+            responseMimeType: "application/json",
+            responseSchema: RESPONSE_SCHEMA,
+          },
         }),
       }
     );
@@ -63,8 +135,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
-    raw = raw.trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+    // Si el contenido fue bloqueado por los filtros de seguridad de Gemini,
+    // candidates puede venir vacío aunque la request en sí haya sido "ok".
+    const finishReason = data?.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== "STOP") {
+      res.status(502).json({
+        error: "El modelo no pudo generar una respuesta completa para este documento. Intenta con otro archivo.",
+      });
+      return;
+    }
+
+    const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
 
     let parsed;
     try {
@@ -74,8 +155,34 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(200).json(parsed);
+    // Validación server-side: aunque el schema ya obliga la forma, esto
+    // protege contra campos faltantes/tipos inesperados y aplica el límite
+    // de 4 pasos que pide el prompt, sin depender 100% del modelo.
+    const seguro = {
+      titulo_significado:
+        typeof parsed.titulo_significado === "string" && parsed.titulo_significado.trim()
+          ? parsed.titulo_significado.trim()
+          : "Resumen del documento",
+      que_significa: typeof parsed.que_significa === "string" ? parsed.que_significa.trim() : "",
+      que_hacer_hoy: Array.isArray(parsed.que_hacer_hoy) ? parsed.que_hacer_hoy.filter(Boolean).slice(0, 4) : [],
+      documentos_necesarios: Array.isArray(parsed.documentos_necesarios)
+        ? parsed.documentos_necesarios.filter(Boolean)
+        : [],
+    };
+
+    if (!seguro.que_significa || seguro.que_hacer_hoy.length === 0) {
+      res.status(502).json({ error: "La IA no generó un plan de acción válido. Intenta de nuevo." });
+      return;
+    }
+
+    res.status(200).json(seguro);
   } catch (err) {
+    if (err.name === "AbortError") {
+      res.status(504).json({ error: "El análisis tardó demasiado. Intenta de nuevo." });
+      return;
+    }
     res.status(500).json({ error: "Error inesperado al analizar el documento." });
+  } finally {
+    clearTimeout(timeout);
   }
 };
