@@ -1,29 +1,16 @@
-// api/analyze.js
-// Función serverless de Vercel. Se despliega automáticamente si este archivo
-// vive en la carpeta /api de tu proyecto (junto a index.html en la raíz).
-//
+// src/pages/api/analyze.js
+// Endpoint serverless de Astro/Vercel para analizar documentos.
+// Se expone automáticamente en /api/analyze.
+
 // Configura las variables de entorno en Vercel (Project Settings → Environment Variables):
 //   GEMINI_API_KEY = tu-key-de-aistudio
 //   GEMINI_MODEL   = gemini-2.5-flash   (opcional, por defecto usa este)
-//
-// El front (index.html) le hace POST a /api/analyze con { text: "..." }
-// (documentos PDF) o con { image: "base64...", mimeType: "image/jpeg" }
-// (fotos), y espera de vuelta el JSON con la forma:
-// { titulo_significado, que_significa, que_hacer_hoy[], documentos_necesarios[] }
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-// Nota: se fija una versión estable en vez de usar el alias "gemini-flash-latest".
-// Ese alias apunta siempre a la última versión de un modelo (estable, preview o
-// incluso experimental) y puede cambiar sin previo aviso — un riesgo real si
-// justo cambia el sábado antes de tu pitch. Con un modelo fijo, lo que probaste
-// es exactamente lo que corre en la demo.
 
-const MAX_INPUT_CHARS = 12000; // debe coincidir con el slice() del frontend
-const FETCH_TIMEOUT_MS = 12000; // corta la llamada a Gemini si tarda demasiado en el demo
+const MAX_INPUT_CHARS = 12000;
+const FETCH_TIMEOUT_MS = 12000;
 const MIME_TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
-// Vercel rechaza cualquier request de más de 4.5MB (413 FUNCTION_PAYLOAD_TOO_LARGE).
-// El frontend ya comprime la foto antes de mandarla, pero esta es la defensa
-// en el servidor por si alguien llama al endpoint directamente.
 const MAX_IMAGE_BASE64_CHARS = 5_000_000;
 
 const SYSTEM_PROMPT = `Eres un asistente especializado en interpretación de documentos de SUNAT para microempresarios peruanos. Tu objetivo es convertir lenguaje burocrático en una explicación clara, útil y honesta, sin inventar nada.
@@ -51,8 +38,6 @@ Estilo de salida:
 - Si no hay suficientes datos para un campo, devuelve una respuesta honesta y corta en lugar de inventar información.
 - Mantén un tono profesional, cercano y comprensible para cualquier usuario.`;
 
-// Schema que fuerza a Gemini a responder SIEMPRE con esta forma exacta,
-// sin necesidad de parsear/limpiar markdown a mano.
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -65,43 +50,53 @@ const RESPONSE_SCHEMA = {
   propertyOrdering: ["titulo_significado", "que_significa", "que_hacer_hoy", "documentos_necesarios"],
 };
 
-module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Método no permitido, usa POST." });
-    return;
-  }
-
+export async function POST({ request }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: "Falta configurar GEMINI_API_KEY en el servidor." });
-    return;
+    return new Response(JSON.stringify({ error: "Falta configurar GEMINI_API_KEY en el servidor." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  const { text, image, mimeType } = req.body || {};
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "El cuerpo de la solicitud no es válido." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
+  const { text, image, mimeType } = body || {};
   const tieneTexto = typeof text === "string" && text.trim().length > 0;
   const tieneImagen = typeof image === "string" && image.trim().length > 0;
 
   if (!tieneTexto && !tieneImagen) {
-    res.status(400).json({ error: "Falta el documento a analizar (texto o imagen)." });
-    return;
+    return new Response(JSON.stringify({ error: "Falta el documento a analizar (texto o imagen)." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   let safeText = "";
   if (tieneTexto) {
-    // Defensa en profundidad: el frontend ya recorta a 12000 caracteres, pero
-    // alguien podría llamar a este endpoint directamente sin pasar por la UI.
     safeText = text.slice(0, MAX_INPUT_CHARS);
   }
 
   if (tieneImagen) {
     if (!MIME_TIPOS_PERMITIDOS.includes(mimeType)) {
-      res.status(400).json({ error: "Formato de imagen no soportado. Usa JPG, PNG o WEBP." });
-      return;
+      return new Response(JSON.stringify({ error: "Formato de imagen no soportado. Usa JPG, PNG o WEBP." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
     if (image.length > MAX_IMAGE_BASE64_CHARS) {
-      res.status(413).json({ error: "La imagen es demasiado pesada. Intenta con una foto más liviana o recórtala." });
-      return;
+      return new Response(JSON.stringify({ error: "La imagen es demasiado pesada. Intenta con una foto más liviana o recórtala." }), {
+        status: 413,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }
 
@@ -131,12 +126,8 @@ module.exports = async function handler(req, res) {
           ],
           generationConfig: {
             temperature: 0.3,
-            // Gemini 2.5 Flash "piensa" internamente antes de responder, y esos
-            // tokens de razonamiento se descuentan del mismo maxOutputTokens.
-            // Como esta tarea es extracción simple (no necesita razonamiento),
-            // lo apagamos para que todo el presupuesto se use en la respuesta.
             thinkingConfig: { thinkingBudget: 0 },
-            maxOutputTokens: 2048, // margen amplio como red de seguridad
+            maxOutputTokens: 2048,
             responseMimeType: "application/json",
             responseSchema: RESPONSE_SCHEMA,
           },
@@ -148,18 +139,23 @@ module.exports = async function handler(req, res) {
 
     if (!geminiResponse.ok) {
       const msg = data?.error?.message || "Error al conectar con Gemini.";
-      res.status(502).json({ error: msg });
-      return;
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Si el contenido fue bloqueado por los filtros de seguridad de Gemini,
-    // candidates puede venir vacío aunque la request en sí haya sido "ok".
     const finishReason = data?.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== "STOP") {
-      res.status(502).json({
-        error: "El modelo no pudo generar una respuesta completa para este documento. Intenta con otro archivo.",
-      });
-      return;
+      return new Response(
+        JSON.stringify({
+          error: "El modelo no pudo generar una respuesta completa para este documento. Intenta con otro archivo.",
+        }),
+        {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
@@ -167,14 +163,13 @@ module.exports = async function handler(req, res) {
     let parsed;
     try {
       parsed = JSON.parse(raw);
-    } catch (e) {
-      res.status(502).json({ error: "La IA devolvió una respuesta que no se pudo interpretar." });
-      return;
+    } catch {
+      return new Response(JSON.stringify({ error: "La IA devolvió una respuesta que no se pudo interpretar." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Validación server-side: aunque el schema ya obliga la forma, esto
-    // protege contra campos faltantes/tipos inesperados y aplica el límite
-    // de 4 pasos que pide el prompt, sin depender 100% del modelo.
     const seguro = {
       titulo_significado:
         typeof parsed.titulo_significado === "string" && parsed.titulo_significado.trim()
@@ -188,18 +183,29 @@ module.exports = async function handler(req, res) {
     };
 
     if (!seguro.que_significa || seguro.que_hacer_hoy.length === 0) {
-      res.status(502).json({ error: "La IA no generó un plan de acción válido. Intenta de nuevo." });
-      return;
+      return new Response(JSON.stringify({ error: "La IA no generó un plan de acción válido. Intenta de nuevo." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    res.status(200).json(seguro);
+    return new Response(JSON.stringify(seguro), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
-    if (err.name === "AbortError") {
-      res.status(504).json({ error: "El análisis tardó demasiado. Intenta de nuevo." });
-      return;
+    if (err?.name === "AbortError") {
+      return new Response(JSON.stringify({ error: "El análisis tardó demasiado. Intenta de nuevo." }), {
+        status: 504,
+        headers: { "Content-Type": "application/json" },
+      });
     }
-    res.status(500).json({ error: "Error inesperado al analizar el documento." });
+
+    return new Response(JSON.stringify({ error: "Error inesperado al analizar el documento." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   } finally {
     clearTimeout(timeout);
   }
-};
+}

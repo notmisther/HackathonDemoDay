@@ -499,10 +499,24 @@ import Layout from '../layouts/Layout.astro';
             body: JSON.stringify(payload)
           });
 
-          const parsed = await response.json();
+          const responseText = await response.text();
+          const contentType = response.headers.get("content-type") || "";
+          let parsed = null;
+          if (contentType.includes("application/json")) {
+            try {
+              parsed = JSON.parse(responseText);
+            } catch {
+              parsed = null;
+            }
+          }
 
           if (!response.ok) {
-            throw new Error(parsed?.error || "Error al conectar con el servidor.");
+            const serverMessage = parsed?.error || responseText || `Error al conectar con el servidor (${response.status}).`;
+            throw new Error(serverMessage);
+          }
+
+          if (!parsed) {
+            throw new Error("El servidor devolvió una respuesta inesperada. Intenta de nuevo.");
           }
 
           renderResult(parsed);
