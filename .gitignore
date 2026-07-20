@@ -8,6 +8,7 @@ pnpm-lock.yaml
 dist/
 .vercel/
 .output/
+.astro/
 
 # Environment
 .env
@@ -20,7 +21,7 @@ dist/
 *.swp
 *.swo
 *~
-.DS_Store
 
 # OS
+.DS_Store
 Thumbs.db

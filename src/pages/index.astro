@@ -221,7 +221,7 @@ import Layout from '../layouts/Layout.astro';
   </div>
 
   <div class="hero">
-    <div class="eyebrow">01 — EL PROBLEMA</div>
+    <div class="eyebrow">01 - EL PROBLEMA</div>
     <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF o una foto y te decimos, en simple, qué hacer.</p>
   </div>
 
@@ -230,9 +230,9 @@ import Layout from '../layouts/Layout.astro';
     <div class="dropzone" id="dropzone">
       <span class="folder-icon" id="folderIcon">📄</span>
       <strong>Arrastra tu PDF o una foto aquí</strong>
-      <span>o toca para elegir un archivo — PDF, o foto (JPG, PNG) de la notificación</span>
+      <span>o toca para elegir un archivo — PDF, JPG o PNG de la notificación</span>
     </div>
-    <input type="file" id="fileInput" accept="application/pdf,image/*" />
+    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
     <div id="fileTag"></div>
     <div style="margin-top:16px; display:flex; justify-content:flex-end;">
       <button class="primary" id="analyzeBtn" disabled>Analizar documento</button>
@@ -374,12 +374,24 @@ import Layout from '../layouts/Layout.astro';
         });
       }
 
+      function getFileKind(file) {
+        const name = (file.name || "").toLowerCase();
+        const type = (file.type || "").toLowerCase();
+        const isPdf = type === "application/pdf" || name.endsWith(".pdf");
+        const isImage =
+          type.startsWith("image/") ||
+          name.endsWith(".jpg") ||
+          name.endsWith(".jpeg") ||
+          name.endsWith(".png");
+
+        return { isPdf, isImage };
+      }
+
       async function handleFile(file) {
-        const esPdf = file.type === "application/pdf";
-        const esImagen = file.type.startsWith("image/");
+        const { isPdf: esPdf, isImage: esImagen } = getFileKind(file);
 
         if (!esPdf && !esImagen) {
-          showError("Por favor sube un PDF o una foto (JPG, PNG) del documento.");
+          showError("Por favor sube un PDF, JPG o PNG del documento.");
           return;
         }
 
