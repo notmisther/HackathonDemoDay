@@ -80,6 +80,123 @@ import Layout from '../layouts/Layout.astro';
       cursor: not-allowed !important;
     }
 
+    #resultCard {
+      background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%) !important;
+      border: 1px solid #e6ecf5 !important;
+      border-radius: 20px !important;
+      box-shadow: 0 16px 40px rgba(26, 35, 54, 0.08) !important;
+      padding: 24px !important;
+    }
+
+    .steps-header {
+      display: flex !important;
+      align-items: center !important;
+      gap: 16px !important;
+      margin-bottom: 22px !important;
+    }
+
+    .stamp-seal {
+      width: 58px !important;
+      height: 58px !important;
+      border-radius: 999px !important;
+      background: #eef4ff !important;
+      color: #1a73e8 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.05em !important;
+      text-transform: uppercase !important;
+      flex-shrink: 0 !important;
+    }
+
+    .result-eyebrow {
+      color: #1a73e8 !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      margin-bottom: 2px !important;
+    }
+
+    .result-subtitle {
+      color: #6b7280 !important;
+      font-size: 14px !important;
+      line-height: 1.4 !important;
+    }
+
+    .result-col {
+      padding: 18px 0 !important;
+      border-top: 1px solid #e6ebf2 !important;
+    }
+
+    .result-col:first-of-type {
+      border-top: none !important;
+      padding-top: 0 !important;
+    }
+
+    .section-label {
+      color: #1a73e8 !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.05em !important;
+      text-transform: uppercase !important;
+      margin-bottom: 8px !important;
+    }
+
+    #meaningTitle {
+      margin: 0 0 10px !important;
+      font-size: 25px !important;
+      line-height: 1.15 !important;
+      color: #202124 !important;
+      letter-spacing: -0.02em !important;
+    }
+
+    #meaningText {
+      margin: 0 !important;
+      font-size: 16px !important;
+      line-height: 1.7 !important;
+      color: #4b5563 !important;
+    }
+
+    #todoList,
+    #docsList {
+      list-style: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: grid !important;
+      gap: 12px !important;
+    }
+
+    #todoList li,
+    #docsList li {
+      position: relative !important;
+      padding-left: 20px !important;
+      font-size: 15px !important;
+      line-height: 1.6 !important;
+      color: #374151 !important;
+    }
+
+    #todoList li::before,
+    #docsList li::before {
+      content: "•" !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: -1px !important;
+      color: #1a73e8 !important;
+      font-size: 22px !important;
+      line-height: 1 !important;
+    }
+
+    #downloadBtn {
+      margin-top: 12px !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 20px rgba(26, 115, 232, 0.18) !important;
+      font-size: 16px !important;
+      padding: 14px 24px !important;
+    }
+
     #uploadCard > div:last-child {
       display: flex !important;
       justify-content: flex-end !important;
@@ -256,28 +373,28 @@ import Layout from '../layouts/Layout.astro';
     <div class="steps-header">
       <div class="stamp-seal">LISTO</div>
       <div>
-        <div class="eyebrow">03 — TU PLAN DE ACCIÓN</div>
-        <div style="font-size:13px;color:#5B6B4C;">Traducido a lenguaje simple</div>
+        <div class="result-eyebrow">03 — TU PLAN DE ACCIÓN</div>
+        <div class="result-subtitle">Traducido a lenguaje simple</div>
       </div>
     </div>
 
     <div class="result-col">
-      <div class="num">QUÉ SIGNIFICA</div>
+      <div class="section-label">QUÉ SIGNIFICA</div>
       <h3 id="meaningTitle">—</h3>
-      <p id="meaningText" style="font-size:14px; line-height:1.55; margin:0;"></p>
+      <p id="meaningText"></p>
     </div>
 
     <div class="result-col">
-      <div class="num">QUÉ DEBES HACER HOY</div>
+      <div class="section-label">QUÉ DEBES HACER HOY</div>
       <ul id="todoList"></ul>
     </div>
 
     <div class="result-col">
-      <div class="num">QUÉ DOCUMENTOS NECESITAS</div>
+      <div class="section-label">QUÉ DOCUMENTOS NECESITAS</div>
       <ul id="docsList"></ul>
     </div>
 
-    <button class="primary" id="downloadBtn" type="button" style="margin-top:6px;">📄 Descargar resumen en PDF</button>
+    <button class="primary" id="downloadBtn" type="button">📄 Descargar resumen en PDF</button>
   </div>
 
   <script type="module">
