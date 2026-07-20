@@ -3,13 +3,102 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout>
+  <style>
+    #fileInput {
+      display: none !important;
+    }
+
+    .eyebrow {
+      color: #1a73e8 !important;
+    }
+
+    .dropzone {
+      border: 2px dashed #1a73e8 !important;
+      border-radius: 8px !important;
+      padding: 34px 20px !important;
+      text-align: center !important;
+      cursor: pointer !important;
+      background-color: #f8faff !important;
+      transition: background 0.2s ease !important;
+      min-height: 200px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .dropzone:hover {
+      background-color: #e8f0fe !important;
+    }
+
+    .dropzone.drag {
+      border-color: #1557b0 !important;
+      background: #e8f0fe !important;
+    }
+
+    .dropzone .folder-icon {
+      font-size: 34px !important;
+      display: block !important;
+      margin-bottom: 10px !important;
+    }
+
+    .dropzone strong {
+      display: block !important;
+      font-size: 15px !important;
+      margin-bottom: 4px !important;
+      color: #1a73e8 !important;
+    }
+
+    .dropzone span {
+      font-size: 13px !important;
+      color: #80868b !important;
+    }
+
+    button.primary {
+      background: #1a73e8 !important;
+      color: #fff !important;
+      border: none !important;
+      padding: 12px 24px !important;
+      border-radius: 6px !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+      cursor: pointer !important;
+      width: 100% !important;
+      transition: background 0.3s ease !important;
+    }
+
+    button.primary:hover {
+      background: #1557b0 !important;
+    }
+
+    button.primary:active {
+      transform: translateY(1px) !important;
+    }
+
+    button.primary:disabled {
+      opacity: 0.45 !important;
+      cursor: not-allowed !important;
+    }
+
+    #uploadCard > div:last-child {
+      display: flex !important;
+      justify-content: flex-end !important;
+      margin-top: 16px !important;
+      width: 100% !important;
+    }
+
+    #uploadCard > div:last-child button {
+      width: 100% !important;
+    }
+  </style>
+
   <div class="hero">
-    <div class="eyebrow">01 — EL PROBLEMA</div>
+    <div class="eyebrow">01 - EL PROBLEMA</div>
     <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF o una foto y te decimos, en simple, qué hacer.</p>
   </div>
 
   <div class="card" id="uploadCard">
-    <div class="eyebrow">02 — SUBE TU DOCUMENTO</div>
+    <div class="eyebrow">02 - SUBE TU DOCUMENTO</div>
     <div class="dropzone" id="dropzone">
       <span class="folder-icon" id="folderIcon">📄</span>
       <strong>Arrastra tu PDF o una foto aquí</strong>
