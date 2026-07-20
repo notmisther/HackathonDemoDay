@@ -1,0 +1,392 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <div class="hero">
+    <div class="eyebrow">01 — EL PROBLEMA</div>
+    <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF o una foto y te decimos, en simple, qué hacer.</p>
+  </div>
+
+  <div class="card" id="uploadCard">
+    <div class="eyebrow">02 — SUBE TU DOCUMENTO</div>
+    <div class="dropzone" id="dropzone">
+      <span class="folder-icon" id="folderIcon">📄</span>
+      <strong>Arrastra tu PDF o una foto aquí</strong>
+      <span>o toca para elegir un archivo — PDF, o foto (JPG, PNG) de la notificación</span>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf,image/*" />
+    <div id="fileTag"></div>
+    <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+      <button class="primary" id="analyzeBtn" disabled>Analizar documento</button>
+    </div>
+  </div>
+
+  <div class="card" id="loaderCard" style="display:none;">
+    <div class="loader-row">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <span id="loaderText">Leyendo el documento...</span>
+    </div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div class="error-box" id="errorText"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <div class="steps-header">
+      <div class="stamp-seal">LISTO</div>
+      <div>
+        <div class="eyebrow">03 — TU PLAN DE ACCIÓN</div>
+        <div style="font-size:13px;color:#5B6B4C;">Traducido a lenguaje simple</div>
+      </div>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ SIGNIFICA</div>
+      <h3 id="meaningTitle">—</h3>
+      <p id="meaningText" style="font-size:14px; line-height:1.55; margin:0;"></p>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ DEBES HACER HOY</div>
+      <ul id="todoList"></ul>
+    </div>
+
+    <div class="result-col">
+      <div class="num">QUÉ DOCUMENTOS NECESITAS</div>
+      <ul id="docsList"></ul>
+    </div>
+
+    <button class="primary" id="downloadBtn" type="button" style="margin-top:6px;">📄 Descargar resumen en PDF</button>
+  </div>
+
+  <script type="module">
+    import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs").then((pdfjsLib) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
+      initializeApp(pdfjsLib);
+    }).catch((err) => {
+      document.getElementById("errorCard").style.display = "block";
+      document.getElementById("errorText").textContent =
+        "No se pudo cargar la librería pdf.js desde el CDN (cdn.jsdelivr.net). Revisa tu conexión a internet o si algo la está bloqueando (firewall, extensión del navegador, red corporativa), y recarga la página.";
+      console.error(err);
+    });
+
+    function initializeApp(pdfjsLib) {
+      let extractedText = "";
+      let extractedImageBase64 = null;
+      let extractedImageMime = null;
+      let fileName = "";
+      let lastResult = null;
+
+      const $ = (id) => document.getElementById(id);
+      const dropzone = $("dropzone");
+      const fileInput = $("fileInput");
+
+      dropzone.addEventListener("click", () => fileInput.click());
+      ["dragover", "dragenter"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropzone.classList.add("drag");
+        });
+      });
+      ["dragleave", "drop"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove("drag");
+        });
+      });
+      dropzone.addEventListener("drop", (e) => {
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+      });
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+      });
+
+      function compressImage(file, maxDim, quality) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round(height * (maxDim / width));
+                width = maxDim;
+              } else {
+                width = Math.round(width * (maxDim / height));
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            const dataUrl = canvas.toDataURL("image/jpeg", quality);
+            resolve(dataUrl.split(",")[1]);
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("No se pudo leer esta imagen. Prueba con otro archivo (JPG o PNG)."));
+          };
+          img.src = url;
+        });
+      }
+
+      async function handleFile(file) {
+        const esPdf = file.type === "application/pdf";
+        const esImagen = file.type.startsWith("image/");
+
+        if (!esPdf && !esImagen) {
+          showError("Por favor sube un PDF o una foto (JPG, PNG) del documento.");
+          return;
+        }
+
+        fileName = file.name;
+        $("folderIcon").textContent = esPdf ? "📄" : "🖼️";
+        $("fileTag").innerHTML = `<div class="filename-tag"><span>${esPdf ? "📎" : "🖼️"} ${escapeHtml(fileName)}</span><button type="button" onclick="window.clearFile()">Quitar</button></div>`;
+
+        if (esPdf) {
+          extractedImageBase64 = null;
+          extractedImageMime = null;
+          try {
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            let text = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              text += content.items.map((it) => it.str).join(" ") + "\n";
+            }
+            extractedText = text.trim();
+            if (!extractedText) {
+              showError("No pudimos leer texto de este PDF (puede ser un escaneo/imagen). Prueba con otro archivo o sube una foto del documento.");
+              checkReady();
+            } else {
+              hideError();
+              checkReady();
+            }
+          } catch (err) {
+            console.error("Error de pdf.js:", err);
+            showError("No se pudo procesar el PDF. Intenta con otro archivo. (Revisa la consola con Cmd+Opt+C para más detalle)");
+          }
+          return;
+        }
+
+        // Es una imagen (foto de la notificación)
+        extractedText = "";
+        try {
+          let base64 = await compressImage(file, 1600, 0.82);
+          if (base64.length > 3_500_000) {
+            base64 = await compressImage(file, 1200, 0.6);
+          }
+          extractedImageBase64 = base64;
+          extractedImageMime = "image/jpeg";
+          hideError();
+          checkReady();
+        } catch (err) {
+          showError(err.message || "No se pudo procesar la imagen. Prueba con otro archivo.");
+        }
+      }
+
+      window.clearFile = function() {
+        extractedText = "";
+        extractedImageBase64 = null;
+        extractedImageMime = null;
+        fileName = "";
+        $("fileTag").innerHTML = "";
+        $("folderIcon").textContent = "📄";
+        checkReady();
+      };
+
+      function checkReady() {
+        $("analyzeBtn").disabled = !extractedText && !extractedImageBase64;
+      }
+
+      function showError(msg) {
+        $("errorCard").style.display = "block";
+        $("errorText").textContent = msg;
+      }
+
+      function hideError() {
+        $("errorCard").style.display = "none";
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+      }
+
+      $("analyzeBtn").addEventListener("click", analyze);
+
+      async function analyze() {
+        hideError();
+        $("resultCard").style.display = "none";
+        $("loaderCard").style.display = "block";
+        $("analyzeBtn").disabled = true;
+
+        const messages = [
+          "Leyendo el documento...",
+          "Detectando fechas límite y sanciones...",
+          "Redactando tu checklist en simple..."
+        ];
+        let mi = 0;
+        const loaderInterval = setInterval(() => {
+          mi = (mi + 1) % messages.length;
+          $("loaderText").textContent = messages[mi];
+        }, 1400);
+
+        try {
+          const payload = extractedImageBase64
+            ? { image: extractedImageBase64, mimeType: extractedImageMime }
+            : { text: extractedText.slice(0, 12000) };
+
+          const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          const parsed = await response.json();
+
+          if (!response.ok) {
+            throw new Error(parsed?.error || "Error al conectar con el servidor.");
+          }
+
+          renderResult(parsed);
+
+        } catch (err) {
+          showError(err.message || "Ocurrió un error al analizar el documento.");
+        } finally {
+          clearInterval(loaderInterval);
+          $("loaderCard").style.display = "none";
+          $("analyzeBtn").disabled = false;
+        }
+      }
+
+      function renderResult(parsed) {
+        lastResult = parsed;
+
+        $("meaningTitle").textContent = parsed.titulo_significado || "Resumen del documento";
+        $("meaningText").textContent = parsed.que_significa || "";
+
+        const todoList = $("todoList");
+        todoList.innerHTML = "";
+        (parsed.que_hacer_hoy || []).forEach((step) => {
+          const li = document.createElement("li");
+          li.textContent = step;
+          todoList.appendChild(li);
+        });
+
+        const docsList = $("docsList");
+        docsList.innerHTML = "";
+        (parsed.documentos_necesarios || []).forEach((doc) => {
+          const li = document.createElement("li");
+          li.textContent = doc;
+          docsList.appendChild(li);
+        });
+
+        // reset stamp animation
+        const seal = document.querySelector(".stamp-seal");
+        seal.style.animation = "none";
+        void seal.offsetWidth;
+        seal.style.animation = null;
+
+        $("resultCard").style.display = "block";
+        $("resultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      $("downloadBtn").addEventListener("click", descargarResumenPDF);
+
+      function descargarResumenPDF() {
+        if (!lastResult || !window.jspdf) {
+          showError("No se pudo generar el PDF. Recarga la página e intenta de nuevo.");
+          return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const marginX = 48;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const maxWidth = pageWidth - marginX * 2;
+        let y = 64;
+
+        function saltarPaginaSiNecesario(alturaNecesaria) {
+          if (y + alturaNecesaria > pageHeight - 60) {
+            doc.addPage();
+            y = 64;
+          }
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(26, 115, 232);
+        doc.text("Trámite Claro", marginX, y);
+        y += 18;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(95, 99, 104);
+        doc.text("Resumen de tu plan de acción", marginX, y);
+        y += 22;
+
+        doc.setDrawColor(224, 224, 224);
+        doc.line(marginX, y, pageWidth - marginX, y);
+        y += 28;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(32, 33, 36);
+        const titleLines = doc.splitTextToSize(lastResult.titulo_significado || "Resumen del documento", maxWidth);
+        saltarPaginaSiNecesario(titleLines.length * 16);
+        doc.text(titleLines, marginX, y);
+        y += titleLines.length * 16 + 10;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(95, 99, 104);
+        const meaningLines = doc.splitTextToSize(lastResult.que_significa || "", maxWidth);
+        saltarPaginaSiNecesario(meaningLines.length * 14);
+        doc.text(meaningLines, marginX, y);
+        y += meaningLines.length * 14 + 26;
+
+        function seccion(titulo, items) {
+          if (!items || !items.length) return;
+          saltarPaginaSiNecesario(20);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(26, 115, 232);
+          doc.text(titulo, marginX, y);
+          y += 18;
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(51, 51, 51);
+          items.forEach((item, i) => {
+            const lines = doc.splitTextToSize(`${i + 1}. ${item}`, maxWidth - 10);
+            saltarPaginaSiNecesario(lines.length * 14);
+            doc.text(lines, marginX + 8, y);
+            y += lines.length * 14 + 6;
+          });
+          y += 14;
+        }
+
+        seccion("QUÉ DEBES HACER HOY", lastResult.que_hacer_hoy);
+        seccion("QUÉ DOCUMENTOS NECESITAS", lastResult.documentos_necesarios);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Generado por Trámite Claro · Este resumen no reemplaza asesoría legal.", marginX, pageHeight - 30);
+
+        const fecha = new Date().toISOString().slice(0, 10);
+        doc.save(`resumen-tramite-claro-${fecha}.pdf`);
+      }
+    }
+  </script>
+</Layout>
