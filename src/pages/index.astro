@@ -90,10 +90,136 @@ import Layout from '../layouts/Layout.astro';
     #uploadCard > div:last-child button {
       width: 100% !important;
     }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #d93025;
+      font-weight: bold;
+    }
+
+    .modal-warning-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .modal-body {
+      margin-bottom: 24px;
+    }
+
+    .modal-body ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style: none;
+    }
+
+    .modal-body li {
+      margin-bottom: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+      padding-left: 8px;
+      position: relative;
+    }
+
+    .modal-body li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #1a73e8;
+      font-weight: bold;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+    }
+
+    .modal-button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .modal-button-primary {
+      background: #1a73e8;
+      color: #fff;
+    }
+
+    .modal-button-primary:hover {
+      background: #1557b0;
+    }
+
+    .modal-button-secondary {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .modal-button-secondary:hover {
+      background: #e8e8e8;
+    }
   </style>
 
+  <!-- Modal de Advertencia -->
+  <div class="modal-overlay" id="warningModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-warning-icon">⚠️</span>
+        <h2>Advertencia importante</h2>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li>Ten presente las fechas del documento que cargarás en "TRÁMITE CLARO"</li>
+          <li>Recuerda: La plataforma es una herramienta de acompañamiento, simplificación e inclusión regulatoria. Sugerimos consultar con un contador o asesor oficial si la falta es grave.</li>
+          <li>Ten presente la calidad de la imagen que subas (fotos nítidas funcionan mejor)</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-button modal-button-primary" id="closeModalBtn">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <div class="hero">
-    <div class="eyebrow">01 - EL PROBLEMA</div>
+    <div class="eyebrow">01 — EL PROBLEMA</div>
     <p>Un documento de SUNAT o de tu municipalidad no debería costarte una multa por no entenderlo. Sube el PDF o una foto y te decimos, en simple, qué hacer.</p>
   </div>
 
@@ -153,6 +279,25 @@ import Layout from '../layouts/Layout.astro';
   </div>
 
   <script type="module">
+    // Handle warning modal
+    document.addEventListener('DOMContentLoaded', function() {
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const warningModal = document.getElementById('warningModal');
+      
+      if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+          warningModal.style.display = 'none';
+        });
+      }
+
+      // Close modal when clicking outside
+      warningModal.addEventListener('click', function(e) {
+        if (e.target === warningModal) {
+          warningModal.style.display = 'none';
+        }
+      });
+    });
+
     import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs").then((pdfjsLib) => {
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
       initializeApp(pdfjsLib);
